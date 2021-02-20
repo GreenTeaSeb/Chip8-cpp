@@ -23,7 +23,7 @@ public:
     unsigned char V[16]={};
     unsigned short indx={};
     unsigned short pc={};
-    unsigned char graphics[WIDTH][HEIGHT]={};
+    unsigned bool graphics[WIDTH][HEIGHT] = {};
 
     unsigned char delayT={};
     unsigned char soundT={};
@@ -88,8 +88,7 @@ public:
     }
     void load()
     {
-      std::ifstream input("C:\\CH8testroms\\AdditionGame.ch8",
-                          std::ios::binary);
+      std::ifstream input("C:\\CH8testroms\\tetris.ch8", std::ios::binary);
       if (!input) {
         printf("failed to open file");
       }
@@ -109,7 +108,7 @@ public:
       unsigned short X = (opcode & 0x0F00) >> 8; // 0XY0;
 
       // check if any key has been pressed
-
+      printf("Using opcode: %02x\n", opcode);
       // decode
       switch (opcode & 0xF000) {
         // do op codes that are dependant on 1st bit
@@ -119,6 +118,7 @@ public:
         case 0x2000: // 2NNN
           pc += 2;
           ++stackPointer;
+          stackPointer %= 16;
           stack[stackPointer] = pc;
           pc = opcode & 0x0FFF;
           break;
@@ -165,7 +165,6 @@ public:
 
         case 0xB000: // BNNN
           pc = (opcode & 0x0FFF) + V[0];
-          pc += 2;
           break;
         case 0xC000: // CXNN
           V[X] = (rand() % 256) & (opcode & 0x00FF);
@@ -254,14 +253,14 @@ public:
         case 0xE000:
           switch (opcode & 0x00FF) {
             case 0x009E: // EX9E
-              if (key[V[X]] != 0) {
+              if (key[V[X] % 16] != 0) {
                 skipNextInst();
               } else {
                 pc += 2;
               }
               break;
             case 0x00A1: // EXA1
-              if (key[V[X]] == 0) {
+              if (key[V[X] % 16] == 0) {
                 skipNextInst();
               } else {
                 pc += 2;
@@ -298,10 +297,10 @@ public:
               pc += 2;
               break;
             case 0x0033: // FX33 BCD
-              printf("used to do");
+              printf("using BCD");
               memory[indx] = V[X] / 100;
               memory[(indx + 1) % 4096] = (V[X] / 10) % 10;
-              memory[(indx + 2) % 4096] = (V[X] / 100) % 10;
+              memory[(indx + 2) % 4096] = V[X] % 10;
               pc += 2;
               break;
             case 0x0055: // FX55
@@ -340,16 +339,17 @@ public:
 
     void draw(int x, int y, int h)
     {
-
       V[0xF] = 0;
       for (int i = 0; i < h; i++) {
         for (int j = 7; j >= 0; j--) {
           unsigned char curPix = graphics[(j + x) % WIDTH][(i + y) % HEIGHT];
           unsigned char nexPix = (memory[(indx + i) % 4096] >> j) & 1;
-          graphics[(7 - j + x) % WIDTH][(i + y) % HEIGHT] ^= nexPix;
-          if (curPix != nexPix) {
+
+          if (curPix == 1 && nexPix == 1) {
             V[0xF] = 1;
           }
+
+          graphics[(7 - j + x) % WIDTH][(i + y) % HEIGHT] ^= nexPix;
         }
       }
       drawFlag = true;
@@ -461,7 +461,7 @@ main()
       window.display();
       Chip8.drawFlag = false;
     }
-    sf::sleep(sf::microseconds(500));
+    sf::sleep(sf::milliseconds(1));
   }
 
   return 0;
