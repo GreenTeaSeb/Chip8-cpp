@@ -23,7 +23,7 @@ public:
     unsigned char V[16]={};
     unsigned short indx={};
     unsigned short pc={};
-    unsigned bool graphics[WIDTH][HEIGHT] = {};
+    bool graphics[WIDTH * HEIGHT] = {};
 
     unsigned char delayT={};
     unsigned char soundT={};
@@ -88,7 +88,7 @@ public:
     }
     void load()
     {
-      std::ifstream input("C:\\CH8testroms\\tetris.ch8", std::ios::binary);
+      std::ifstream input("C:\\CH8testroms\\Fritters.ch8", std::ios::binary);
       if (!input) {
         printf("failed to open file");
       }
@@ -108,7 +108,7 @@ public:
       unsigned short X = (opcode & 0x0F00) >> 8; // 0XY0;
 
       // check if any key has been pressed
-      printf("Using opcode: %02x\n", opcode);
+
       // decode
       switch (opcode & 0xF000) {
         // do op codes that are dependant on 1st bit
@@ -181,11 +181,7 @@ public:
         case 0x0000:
           switch (opcode & 0x000F) {
             case 0x0000: // 0x00E0
-              for (auto& i : graphics) {
-                for (auto& j : i) {
-                  j = 0;
-                }
-              }
+              std::fill_n(graphics, WIDTH * HEIGHT, 0);
               drawFlag = true;
               pc += 2;
               break;
@@ -341,15 +337,17 @@ public:
     {
       V[0xF] = 0;
       for (int i = 0; i < h; i++) {
-        for (int j = 7; j >= 0; j--) {
-          unsigned char curPix = graphics[(j + x) % WIDTH][(i + y) % HEIGHT];
-          unsigned char nexPix = (memory[(indx + i) % 4096] >> j) & 1;
+        for (int j = 0; j < 8; j++) {
+          unsigned int index = ((i + y) % HEIGHT) * WIDTH + ((x + j) % WIDTH);
+          bool curPix = graphics[index];
+          bool nexPix = memory[(indx + i) % 4096] & (0x80 >> j);
 
-          if (curPix == 1 && nexPix == 1) {
-            V[0xF] = 1;
+          if (nexPix != 0) {
+            if (curPix == 1) {
+              V[0xF] = 1;
+            }
+            graphics[index] ^= nexPix;
           }
-
-          graphics[(7 - j + x) % WIDTH][(i + y) % HEIGHT] ^= nexPix;
         }
       }
       drawFlag = true;
@@ -357,9 +355,10 @@ public:
 
     void display()
     {
+
       for (int y = 0; y < HEIGHT; y++) {
         for (int x = 0; x < WIDTH; x++) {
-          unsigned char curPix = graphics[x][y]; // pixel to display
+          unsigned char curPix = graphics[y * WIDTH + x]; // pixel to display
           if (curPix) {
             sf::RectangleShape pixel(sf::Vector2f(SCALE, SCALE));
             pixel.setPosition(x * SCALE, y * SCALE);
@@ -461,7 +460,7 @@ main()
       window.display();
       Chip8.drawFlag = false;
     }
-    sf::sleep(sf::milliseconds(1));
+    sf::sleep(sf::milliseconds(100));
   }
 
   return 0;
