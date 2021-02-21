@@ -66,7 +66,7 @@ public:
       stackPointer = 0;
 
       // load fontset
-      for (int i = 0; i < 80; ++i) {
+      for (int i = 0; i < 80; i++) {
         memory[i] = chip8_fontset[i];
       }
     }
@@ -88,7 +88,8 @@ public:
     }
     void load()
     {
-      std::ifstream input("C:\\CH8testroms\\Fritters.ch8", std::ios::binary);
+      std::ifstream input("C:\\CH8testroms\\AdditionGame.ch8",
+                          std::ios::binary);
       if (!input) {
         printf("failed to open file");
       }
@@ -289,7 +290,8 @@ public:
               pc += 2;
               break;
             case 0x0029: // FX29
-              indx = V[X];
+              printf("using fx29\n");
+              indx = V[X] * 5;
               pc += 2;
               break;
             case 0x0033: // FX33 BCD
@@ -330,11 +332,24 @@ public:
           --soundT;
         }
       }
-      // std::fill_n(key, 16, 0);
+      std::fill_n(key, 16, 0);
     }
 
     void draw(int x, int y, int h)
     {
+      //      printf("x = %04x y = %04x h = %04x i = %06x\n", x, y, h, indx);
+      //      for (int i = 0; i < h; i++) {
+      //        for (int j = 0; j < 8; j++) {
+      //          bool nexPix = memory[(indx * h + i) % 4096] & (0x80 >> j);
+      //          if (nexPix == 0) {
+      //            printf(" ");
+      //          } else {
+      //            printf("*");
+      //          }
+      //        }
+      //        printf("\n");
+      //      }
+
       V[0xF] = 0;
       for (int i = 0; i < h; i++) {
         for (int j = 0; j < 8; j++) {
@@ -460,7 +475,7 @@ main()
       window.display();
       Chip8.drawFlag = false;
     }
-    sf::sleep(sf::milliseconds(100));
+    sf::sleep(sf::milliseconds(1));
   }
 
   return 0;
