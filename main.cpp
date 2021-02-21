@@ -11,8 +11,10 @@ using namespace std;
 
 const int SCALE = 10;
 
+const int MEMORY_SIZE = 4096;
 const int WIDTH = 64;
 const int HEIGHT = 32;
+const int SLEEP = 16;
 
 sf::RenderWindow window(sf::VideoMode(WIDTH* SCALE, HEIGHT* SCALE), "Chip-8");
 
@@ -20,7 +22,7 @@ class chip8
 {
 public:
     unsigned short opcode={};
-    unsigned char memory[4096]={};
+    unsigned char memory[MEMORY_SIZE] = {};
     unsigned char V[16]={};
     unsigned short indx={};
     unsigned short pc={};
@@ -88,22 +90,22 @@ public:
     }
     void load()
     {
-      std::ifstream input("C:\\CH8testroms\\Brick.ch8", std::ios::binary);
+      std::ifstream input("C:\\CH8testroms\\Filter.ch8", std::ios::binary);
       if (!input) {
         printf("failed to open file");
       }
-      input.read((char*)(memory + 0x200), 4096 - 0x200);
+      input.read((char*)(memory + 0x200), MEMORY_SIZE - 0x200);
     }
 
     void cycle()
     {
-      pc %= 4096;
+      pc %= MEMORY_SIZE;
       stackPointer %= 16;
-      indx %= 4096;
-      cylceCounter %= 16;
+      indx %= MEMORY_SIZE;
+      cylceCounter %= SLEEP;
 
       // get opcode
-      opcode = memory[pc] << 8 | memory[(pc + 1) % 4096];
+      opcode = memory[pc] << 8 | memory[(pc + 1) % MEMORY_SIZE];
 
       unsigned short Y = (opcode & 0x00F0) >> 4;
       unsigned short X = (opcode & 0x0F00) >> 8; // 0XY0;
@@ -296,20 +298,20 @@ public:
             case 0x0033: // FX33 BCD
               printf("using BCD");
               memory[indx] = V[X] / 100;
-              memory[(indx + 1) % 4096] = (V[X] / 10) % 10;
-              memory[(indx + 2) % 4096] = V[X] % 10;
+              memory[(indx + 1) % MEMORY_SIZE] = (V[X] / 10) % 10;
+              memory[(indx + 2) % MEMORY_SIZE] = V[X] % 10;
               pc += 2;
               break;
             case 0x0055: // FX55
               for (int i = 0; i <= X; i++) {
 
-                memory[(indx + i) % 4096] = V[i];
+                memory[(indx + i) % MEMORY_SIZE] = V[i];
               }
               pc += 2;
               break;
             case 0x0065: // FX65
               for (int i = 0; i <= X; i++) {
-                V[i] = memory[(indx + i) % 4096];
+                V[i] = memory[(indx + i) % MEMORY_SIZE];
               }
               pc += 2;
               break;
@@ -323,11 +325,11 @@ public:
       }
 
       // timers
-      if (++cylceCounter == 16) {
+      if (++cylceCounter == SLEEP) {
         if (delayT > 0)
           --delayT;
         if (soundT > 0) {
-          Beep(500, 16);
+          // Beep(500, SLEEP);
           --soundT;
         }
       }
@@ -340,7 +342,7 @@ public:
         for (int j = 0; j < 8; j++) {
           unsigned int index = ((i + y) % HEIGHT) * WIDTH + ((x + j) % WIDTH);
           bool curPix = graphics[index];
-          bool nexPix = memory[(indx + i) % 4096] & (0x80 >> j);
+          bool nexPix = memory[(indx + i) % MEMORY_SIZE] & (0x80 >> j);
 
           if (nexPix != 0) {
             if (curPix == 1) {
