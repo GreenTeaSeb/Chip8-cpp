@@ -3,6 +3,7 @@
 #include <fstream>
 #include <iostream>
 #include <time.h>
+#include <windows.h>
 
 //TO DO: use drawflag
 
@@ -30,8 +31,7 @@ public:
     unsigned short stack[16]={};
     unsigned short stackPointer={};
     unsigned char key[16]={};
-
-
+    unsigned short cylceCounter = {};
     unsigned char chip8_fontset[80] =
     {
       0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
@@ -88,8 +88,7 @@ public:
     }
     void load()
     {
-      std::ifstream input("C:\\CH8testroms\\AdditionGame.ch8",
-                          std::ios::binary);
+      std::ifstream input("C:\\CH8testroms\\Brick.ch8", std::ios::binary);
       if (!input) {
         printf("failed to open file");
       }
@@ -101,6 +100,7 @@ public:
       pc %= 4096;
       stackPointer %= 16;
       indx %= 4096;
+      cylceCounter %= 16;
 
       // get opcode
       opcode = memory[pc] << 8 | memory[(pc + 1) % 4096];
@@ -290,7 +290,6 @@ public:
               pc += 2;
               break;
             case 0x0029: // FX29
-              printf("using fx29\n");
               indx = V[X] * 5;
               pc += 2;
               break;
@@ -324,32 +323,18 @@ public:
       }
 
       // timers
-      if (!awaitKey) {
+      if (++cylceCounter == 16) {
         if (delayT > 0)
           --delayT;
-        if (soundT == 1) {
-          // beep
+        if (soundT > 0) {
+          Beep(500, 16);
           --soundT;
         }
       }
-      std::fill_n(key, 16, 0);
     }
 
     void draw(int x, int y, int h)
     {
-      //      printf("x = %04x y = %04x h = %04x i = %06x\n", x, y, h, indx);
-      //      for (int i = 0; i < h; i++) {
-      //        for (int j = 0; j < 8; j++) {
-      //          bool nexPix = memory[(indx * h + i) % 4096] & (0x80 >> j);
-      //          if (nexPix == 0) {
-      //            printf(" ");
-      //          } else {
-      //            printf("*");
-      //          }
-      //        }
-      //        printf("\n");
-      //      }
-
       V[0xF] = 0;
       for (int i = 0; i < h; i++) {
         for (int j = 0; j < 8; j++) {
@@ -397,7 +382,6 @@ main()
   // setup
   Chip8.setup();
   Chip8.load();
-  Chip8.key[0] = 1;
   window.clear(sf::Color::Black);
   while (window.isOpen()) {
 
@@ -408,62 +392,67 @@ main()
         case sf::Event::Closed:
           window.close();
           break;
-
+        case sf::Event::KeyReleased:
         case sf::Event::KeyPressed: // KEY INPUTS
-          Chip8.keyPressed = true;
+          unsigned char key = 0xFF;
+
           switch (event.key.code) {
             case sf::Keyboard::Numpad0:
-              Chip8.key[0] = 1;
+              key = 0x0;
               break;
             case sf::Keyboard::Numpad1:
-              Chip8.key[1] = 1;
+              key = 0x1;
               break;
             case sf::Keyboard::Numpad2:
-              Chip8.key[2] = 1;
+              key = 0x2;
               break;
             case sf::Keyboard::Numpad3:
-              Chip8.key[0x3] = 1;
+              key = 0x3;
               break;
             case sf::Keyboard::Numpad4:
-              Chip8.key[0x4] = 1;
+              key = 0x4;
               break;
             case sf::Keyboard::Numpad5:
-              Chip8.key[0x5] = 1;
+              key = 0x5;
               break;
             case sf::Keyboard::Numpad6:
-              Chip8.key[0x6] = 1;
+              key = 0x6;
               break;
             case sf::Keyboard::Numpad7:
-              Chip8.key[0x7] = 1;
+              key = 0x7;
               break;
             case sf::Keyboard::Numpad8:
-              Chip8.key[0x8] = 1;
+              key = 0x8;
               break;
             case sf::Keyboard::Numpad9:
-              Chip8.key[0x9] = 1;
+              key = 0x9;
               break;
             case sf::Keyboard::A:
-              Chip8.key[0xA] = 1;
+              key = 0xA;
               break;
             case sf::Keyboard::B:
-              Chip8.key[0xB] = 1;
+              key = 0xB;
               break;
             case sf::Keyboard::C:
-              Chip8.key[0xC] = 1;
+              key = 0xC;
               break;
             case sf::Keyboard::D:
-              Chip8.key[0xD] = 1;
+              key = 0xD;
               break;
             case sf::Keyboard::E:
-              Chip8.key[0xE] = 1;
+              key = 0xE;
               break;
             case sf::Keyboard::F:
-              Chip8.key[0xF] = 1;
+              key = 0xF;
               break;
 
             default:
-
-              break;
+              key = 0xFF;
+          }
+          if (key != 0xFF) {
+            Chip8.key[key] = event.type == sf::Event::KeyPressed;
+            Chip8.keyAwaited = key;
+            Chip8.keyPressed = event.type == sf::Event::KeyPressed;
           }
           break;
       }
