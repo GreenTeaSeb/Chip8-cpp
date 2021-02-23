@@ -3,11 +3,10 @@
 #include <fstream>
 #include <iostream>
 #include <time.h>
-#include <windows.h>
 
 //TO DO: use drawflag
 
-using namespace std;
+using std::string;
 
 const int SCALE = 10;
 
@@ -15,6 +14,8 @@ const int MEMORY_SIZE = 4096;
 const int WIDTH = 64;
 const int HEIGHT = 32;
 const int SLEEP = 16;
+int SPRITE_SIZE = 8;
+string romToload = {};
 
 sf::RenderWindow window(sf::VideoMode(WIDTH* SCALE, HEIGHT* SCALE), "Chip-8");
 
@@ -57,6 +58,7 @@ public:
     bool drawFlag = {};
     bool keyPressed = {};
     bool awaitKey = {};
+    bool paused = {};
     unsigned char keyAwaited = {};
 
     void setup()
@@ -88,11 +90,13 @@ public:
       // todo
       pc += 4;
     }
-    void load()
+    void load(string rom)
     {
-      std::ifstream input("C:\\CH8testroms\\Filter.ch8", std::ios::binary);
+      std::ifstream input("CH8testroms\\" + rom, std::ios::binary);
       if (!input) {
+        romToload = "";
         printf("failed to open file");
+        return;
       }
       input.read((char*)(memory + 0x200), MEMORY_SIZE - 0x200);
     }
@@ -339,7 +343,7 @@ public:
     {
       V[0xF] = 0;
       for (int i = 0; i < h; i++) {
-        for (int j = 0; j < 8; j++) {
+        for (int j = 0; j < SPRITE_SIZE; j++) {
           unsigned int index = ((i + y) % HEIGHT) * WIDTH + ((x + j) % WIDTH);
           bool curPix = graphics[index];
           bool nexPix = memory[(indx + i) % MEMORY_SIZE] & (0x80 >> j);
@@ -370,88 +374,131 @@ public:
       }
     }
 
-    void getKeyPress();
+    void restart()
+    {
+      this->setup();
+      this->load(romToload);
+    }
 };
 
 int
 main()
 {
+  //  std::cin >> romToload;
 
   chip8 Chip8;
   srand(time(0));
   // graphics and input
+  sf::String input;
+  sf::Text inputText;
+  sf::Font font;
+  if (!font.loadFromFile("font.ttf"))
+    ;
+  inputText.setFont(font);
+  inputText.setScale(0.5, 0.5);
+  inputText.setOrigin(0, 0);
 
   // setup
   Chip8.setup();
-  Chip8.load();
+  Chip8.load(romToload);
   window.clear(sf::Color::Black);
   while (window.isOpen()) {
-
-    Chip8.cycle();
+    if (romToload != "") {
+      Chip8.cycle();
+    } else {
+      window.clear(sf::Color::Black);
+      window.draw(inputText);
+      window.display();
+    }
     sf::Event event;
     while (window.pollEvent(event)) {
       switch (event.type) {
         case sf::Event::Closed:
           window.close();
           break;
+        case sf::Event::TextEntered:
+          if (event.text.unicode != '\b') {
+            input += event.text.unicode;
+
+          } else {
+            if (input.getSize() > 0) {
+              input.erase(input.getSize() - 1, 1);
+            }
+          }
+
+          inputText.setString(input);
         case sf::Event::KeyReleased:
         case sf::Event::KeyPressed: // KEY INPUTS
           unsigned char key = 0xFF;
+          if (romToload != "") {
+            switch (event.key.code) {
+              case sf::Keyboard::Numpad0:
+                key = 0x0;
+                break;
+              case sf::Keyboard::Numpad1:
+                key = 0x1;
+                break;
+              case sf::Keyboard::Numpad2:
+                key = 0x2;
+                break;
+              case sf::Keyboard::Numpad3:
+                key = 0x3;
+                break;
+              case sf::Keyboard::Numpad4:
+                key = 0x4;
+                break;
+              case sf::Keyboard::Numpad5:
+                key = 0x5;
+                break;
+              case sf::Keyboard::Numpad6:
+                key = 0x6;
+                break;
+              case sf::Keyboard::Numpad7:
+                key = 0x7;
+                break;
+              case sf::Keyboard::Numpad8:
+                key = 0x8;
+                break;
+              case sf::Keyboard::Numpad9:
+                key = 0x9;
+                break;
+              case sf::Keyboard::A:
+                key = 0xA;
+                break;
+              case sf::Keyboard::B:
+                key = 0xB;
+                break;
+              case sf::Keyboard::C:
+                key = 0xC;
+                break;
+              case sf::Keyboard::D:
+                key = 0xD;
+                break;
+              case sf::Keyboard::E:
+                key = 0xE;
+                break;
+              case sf::Keyboard::F:
+                key = 0xF;
+                break;
+              case sf::Keyboard::Enter:
+                Chip8 = chip8();
+                Chip8.restart();
+                break;
+              case sf::Keyboard::Escape:
+                window.close();
+                break;
 
-          switch (event.key.code) {
-            case sf::Keyboard::Numpad0:
-              key = 0x0;
-              break;
-            case sf::Keyboard::Numpad1:
-              key = 0x1;
-              break;
-            case sf::Keyboard::Numpad2:
-              key = 0x2;
-              break;
-            case sf::Keyboard::Numpad3:
-              key = 0x3;
-              break;
-            case sf::Keyboard::Numpad4:
-              key = 0x4;
-              break;
-            case sf::Keyboard::Numpad5:
-              key = 0x5;
-              break;
-            case sf::Keyboard::Numpad6:
-              key = 0x6;
-              break;
-            case sf::Keyboard::Numpad7:
-              key = 0x7;
-              break;
-            case sf::Keyboard::Numpad8:
-              key = 0x8;
-              break;
-            case sf::Keyboard::Numpad9:
-              key = 0x9;
-              break;
-            case sf::Keyboard::A:
-              key = 0xA;
-              break;
-            case sf::Keyboard::B:
-              key = 0xB;
-              break;
-            case sf::Keyboard::C:
-              key = 0xC;
-              break;
-            case sf::Keyboard::D:
-              key = 0xD;
-              break;
-            case sf::Keyboard::E:
-              key = 0xE;
-              break;
-            case sf::Keyboard::F:
-              key = 0xF;
-              break;
-
-            default:
-              key = 0xFF;
+              default:
+                key = 0xFF;
+            }
+          } else {
+            if (event.key.code == sf::Keyboard::Enter) {
+              romToload = inputText.getString().toAnsiString();
+              Chip8.load(romToload);
+              std::cout << "enter";
+            }
           }
-          if (key != 0xFF) {
+          if (key != 0xFF && romToload != "") {
             Chip8.key[key] = event.type == sf::Event::KeyPressed;
             Chip8.keyAwaited = key;
             Chip8.keyPressed = event.type == sf::Event::KeyPressed;
